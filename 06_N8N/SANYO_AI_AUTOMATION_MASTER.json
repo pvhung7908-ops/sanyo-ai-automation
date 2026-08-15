@@ -1,0 +1,221 @@
+{
+  "name": "SANYO AI Automation - Master",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "START",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst run_id = `SANYO-${now.toISOString().replace(/[-:.TZ]/g,'')}-${Math.random().toString(36).slice(2,8)}`;\n\nreturn [{\n  json: {\n    run_id,\n    status: 'INTAKE',\n    created_at: now.toISOString(),\n    brand: 'Sanyo Yusoki Vietnam',\n    input: {\n      topic: 'REPLACE_TOPIC',\n      audience: 'REPLACE_AUDIENCE',\n      objective: 'REPLACE_OBJECTIVE',\n      platform: 'TikTok'\n    }\n  }\n}];"
+      },
+      "id": "intake",
+      "name": "01 CONTENT INTAKE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst input = d.input || {};\n\nif (!input.topic || input.topic === 'REPLACE_TOPIC') {\n  throw new Error('INPUT ERROR: topic chưa được khai báo');\n}\n\nreturn [{ json: {\n  ...d,\n  status: 'CUSTOMER_INSIGHT',\n  customer_insight: {\n    problem: input.topic,\n    audience: input.audience,\n    desired_change: input.objective\n  }\n}}];"
+      },
+      "id": "insight",
+      "name": "02 CUSTOMER INSIGHT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'CONTENT_GENERATION',\n  content: {\n    hook: '',\n    story: '',\n    analysis: '',\n    cta: ''\n  },\n  generation_instruction: `Tạo nội dung thương hiệu Sanyo Yusoki Vietnam dựa trên customer insight. Ưu tiên hữu ích, rõ ràng, đáng tin cậy; không phóng đại; CTA tự nhiên.`\n}}];"
+      },
+      "id": "content",
+      "name": "03 CONTENT GENERATION",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'VIDEO_BRIEF',\n  video_brief: {\n    duration_seconds: 60,\n    structure: ['HOOK 0-5s','STORY 5-25s','ANALYSIS 25-50s','CTA 50-60s'],\n    visual_direction: 'Japanese premium, trustworthy, family-oriented',\n    camera: 'natural cinematic movement',\n    audio: 'clear Vietnamese voiceover',\n    continuity_required: true\n  }\n}}];"
+      },
+      "id": "brief",
+      "name": "04 VIDEO BRIEF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'PROMPT_ASSEMBLY',\n  prompts: {\n    master: '',\n    negative: 'distorted architecture, inconsistent elevator dimensions, unreadable text, extra people, duplicated objects, unstable geometry, unrealistic motion',\n    continuity: 'same architecture, same elevator design, same family appearance, consistent lighting and spatial relationships'\n  }\n}}];"
+      },
+      "id": "prompts",
+      "name": "05 PROMPT ASSEMBLY",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'ASSET_SELECTION',\n  assets: {\n    brand: true,\n    elevator: true,\n    cabin: true,\n    family: true,\n    architecture: true,\n    location: true,\n    material: true\n  }\n}}];"
+      },
+      "id": "assets",
+      "name": "06 ASSET SELECTION",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'VEO_PRODUCTION',\n  production: {\n    engine: 'VEO_3',\n    ready_for_generation: true,\n    prompt_ready: Boolean(d.prompts),\n    asset_ready: Boolean(d.assets)\n  }\n}}];"
+      },
+      "id": "veo",
+      "name": "07 VEO PRODUCTION",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst checks = {\n  accuracy: true,\n  brand_consistency: true,\n  customer_relevance: true,\n  clarity: true,\n  trustworthiness: true,\n  legal_safety: true,\n  cta: true,\n  continuity: Boolean(d.production?.ready_for_generation)\n};\n\nconst failed = Object.entries(checks).filter(([,v]) => !v).map(([k]) => k);\n\nreturn [{ json: {\n  ...d,\n  status: failed.length ? 'QUALITY_FAIL' : 'QUALITY_PASS',\n  quality_gate: {\n    checks,\n    failed,\n    score: Object.values(checks).filter(Boolean).length / Object.keys(checks).length\n  }\n}}];"
+      },
+      "id": "quality",
+      "name": "08 QUALITY GATE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.quality_gate.score >= 1}}",
+              "operation": "true"
+            }
+          ]
+        }
+      },
+      "id": "quality-if",
+      "name": "QUALITY PASS?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1980, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'HUMAN_REVIEW',\n  human_review: {\n    required: true,\n    decision: 'PENDING',\n    reviewer: '',\n    notes: ''\n  }\n}}];"
+      },
+      "id": "review",
+      "name": "09 HUMAN REVIEW",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'CALIBRATED',\n  calibration: {\n    required: true,\n    brand_check: 'PASS',\n    customer_check: 'PASS',\n    visual_check: 'PASS',\n    message_check: 'PASS',\n    final_adjustment: 'PENDING'\n  }\n}}];"
+      },
+      "id": "calibration",
+      "name": "10 CALIBRATION",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2420, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst output = {\n  run_id: d.run_id,\n  status: 'FINAL',\n  generated_at: new Date().toISOString(),\n  brand: d.brand,\n  customer_insight: d.customer_insight,\n  content: d.content,\n  video_brief: d.video_brief,\n  prompts: d.prompts,\n  assets: d.assets,\n  quality_gate: d.quality_gate,\n  calibration: d.calibration,\n  production: d.production\n};\n\nreturn [{ json: output }];"
+      },
+      "id": "output",
+      "name": "11 OUTPUT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'MEASUREMENT_READY',\n  measurement: {\n    run_id: d.run_id,\n    platform: d.input?.platform || 'unknown',\n    metrics_to_collect: ['views','watch_time','completion_rate','engagement_rate','leads','contracts'],\n    learning_loop: true\n  }\n}}];"
+      },
+      "id": "measurement",
+      "name": "12 MEASUREMENT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2860, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'LEARNING_LOOP',\n  next_action: 'Store performance data and feed validated insights into the next content generation cycle.'\n}}];"
+      },
+      "id": "learning",
+      "name": "13 LEARNING LOOP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nreturn [{ json: {\n  run_id: d.run_id,\n  status: 'ERROR_REVIEW_REQUIRED',\n  failed_checks: d.quality_gate?.failed || [],\n  retry_policy: 'Return to content/prompt stage after correction; never publish failed output.'\n}}];"
+      },
+      "id": "error-route",
+      "name": "QUALITY FAIL / RETRY",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, 430]
+    }
+  ],
+  "connections": {
+    "START": {
+      "main": [[{"node": "01 CONTENT INTAKE", "type": "main", "index": 0}]]
+    },
+    "01 CONTENT INTAKE": {
+      "main": [[{"node": "02 CUSTOMER INSIGHT", "type": "main", "index": 0}]]
+    },
+    "02 CUSTOMER INSIGHT": {
+      "main": [[{"node": "03 CONTENT GENERATION", "type": "main", "index": 0}]]
+    },
+    "03 CONTENT GENERATION": {
+      "main": [[{"node": "04 VIDEO BRIEF", "type": "main", "index": 0}]]
+    },
+    "04 VIDEO BRIEF": {
+      "main": [[{"node": "05 PROMPT ASSEMBLY", "type": "main", "index": 0}]]
+    },
+    "05 PROMPT ASSEMBLY": {
+      "main": [[{"node": "06 ASSET SELECTION", "type": "main", "index": 0}]]
+    },
+    "06 ASSET SELECTION": {
+      "main": [[{"node": "07 VEO PRODUCTION", "type": "main", "index": 0}]]
+    },
+    "07 VEO PRODUCTION": {
+      "main": [[{"node": "08 QUALITY GATE", "type": "main", "index": 0}]]
+    },
+    "08 QUALITY GATE": {
+      "main": [[{"node": "QUALITY PASS?", "type": "main", "index": 0}]]
+    },
+    "QUALITY PASS?": {
+      "main": [
+        [{"node": "09 HUMAN REVIEW", "type": "main", "index": 0}],
+        [{"node": "QUALITY FAIL / RETRY", "type": "main", "index": 0}]
+      ]
+    },
+    "09 HUMAN REVIEW": {
+      "main": [[{"node": "10 CALIBRATION", "type": "main", "index": 0}]]
+    },
+    "10 CALIBRATION": {
+      "main": [[{"node": "11 OUTPUT", "type": "main", "index": 0}]]
+    },
+    "11 OUTPUT": {
+      "main": [[{"node": "12 MEASUREMENT", "type": "main", "index": 0}]]
+    },
+    "12 MEASUREMENT": {
+      "main": [[{"node": "13 LEARNING LOOP", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "versionId": "sanyo-ai-automation-v1"
+}
