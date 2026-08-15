@@ -1,0 +1,76 @@
+{
+  "system": "SANYO_AI_AUTOMATION",
+  "version": "v1.0",
+  "environment": "development",
+  "security": {
+    "keys_from_environment": true,
+    "commit_secrets": false,
+    "required_env": [
+      "OPENAI_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "GEMINI_API_KEY"
+    ]
+  },
+  "providers": {
+    "openai": {
+      "enabled": false,
+      "role": ["text_primary", "reasoning", "content"],
+      "api_key_env": "OPENAI_API_KEY",
+      "model_env": "OPENAI_TEXT_MODEL"
+    },
+    "anthropic": {
+      "enabled": false,
+      "role": ["review", "secondary_reasoning"],
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "model_env": "ANTHROPIC_REVIEW_MODEL"
+    },
+    "google": {
+      "enabled": false,
+      "role": ["video", "image"],
+      "api_key_env": "GEMINI_API_KEY",
+      "video_model_env": "VIDEO_MODEL",
+      "image_model_env": "IMAGE_MODEL"
+    }
+  },
+  "router": {
+    "default_text_provider": "openai",
+    "default_review_provider": "anthropic",
+    "default_video_provider": "google",
+    "default_image_provider": "google",
+    "human_review_required": true,
+    "calibration_required": true,
+    "quality_gate_required": true,
+    "fallback_enabled": true,
+    "max_retries": 1
+  },
+  "quality": {
+    "minimum_score": 1,
+    "required_checks": [
+      "accuracy",
+      "brand_consistency",
+      "customer_relevance",
+      "clarity",
+      "trustworthiness",
+      "legal_safety",
+      "cta",
+      "continuity"
+    ]
+  },
+  "cost_control": {
+    "video_requires_approved_brief": true,
+    "video_requires_quality_pass": true,
+    "video_requires_human_review": true,
+    "automatic_unlimited_generation": false
+  },
+  "traceability": {
+    "required_fields": [
+      "run_id",
+      "provider",
+      "model",
+      "prompt_version",
+      "asset_version",
+      "workflow_version",
+      "calibration_version"
+    ]
+  }
+}
