@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+credentials.json
+secrets.json
+token.json
+12_LOCAL_RUNTIME/runs/*
+!12_LOCAL_RUNTIME/runs/.gitkeep
