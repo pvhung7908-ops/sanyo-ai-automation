@@ -30,7 +30,7 @@ content_type
 ## Validation Failure
 
 INPUT_ERROR
-→ WF-13
+→ WF-14
 
 ## Success
 

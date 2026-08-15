@@ -1,4 +1,4 @@
-# WF-10 — Output Management
+# WF-11 — Output Management
 
 ## Purpose
 
@@ -38,4 +38,4 @@ Approved
 → Store Final Reference
 → Set PUBLISHED_READY
 
-→ WF-11
+→ WF-12

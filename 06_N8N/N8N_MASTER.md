@@ -68,10 +68,10 @@ WF-06 Asset Selection
 WF-07 VEO Production
 WF-08 Quality Gate
 WF-09 Human Review
-WF-10 Output Management
-WF-11 Measurement
-WF-12 Learning Loop
-WF-13 Error Handler
+WF-11 Output Management
+WF-12 Measurement
+WF-13 Learning Loop
+WF-14 Error Handler
 
 ---
 

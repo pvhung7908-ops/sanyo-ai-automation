@@ -43,10 +43,10 @@ SANYO | WF-06 | Asset Selection
 SANYO | WF-07 | VEO Production
 SANYO | WF-08 | Quality Gate
 SANYO | WF-09 | Human Review
-SANYO | WF-10 | Output Management
-SANYO | WF-11 | Measurement
-SANYO | WF-12 | Learning Loop
-SANYO | WF-13 | Error Handler
+SANYO | WF-11 | Output Management
+SANYO | WF-12 | Measurement
+SANYO | WF-13 | Learning Loop
+SANYO | WF-14 | Error Handler
 
 ---
 

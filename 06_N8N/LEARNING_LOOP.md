@@ -1,4 +1,4 @@
-# WF-12 — Learning Loop
+# WF-13 — Learning Loop
 
 ## Purpose
 
