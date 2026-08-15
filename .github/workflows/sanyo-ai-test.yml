@@ -1,0 +1,70 @@
+name: SANYO AI System Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: SANYO AI Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check 09_AI_PROVIDER/provider_mapping.js
+
+      - name: Run provider mapping test
+        run: |
+          node 09_AI_PROVIDER/provider_mapping.js
+
+      - name: Run security test
+        run: |
+          node 11_SECURITY/security_test.js
+
+      - name: Run local runtime test
+        run: |
+          node 12_LOCAL_RUNTIME/local_runtime.js
+
+      - name: Check required directories
+        run: |
+          test -d 06_N8N
+          test -d 07_WORKFLOWS
+          test -d 08_OUTPUT
+          test -d 09_AI_PROVIDER
+          test -d 10_API_CONFIG
+          test -d 11_SECURITY
+          test -d 12_LOCAL_RUNTIME
+          test -d 13_TESTING
+
+      - name: Check secrets are not tracked
+        run: |
+          if git ls-files | grep -E '(^|/)(\.env|credentials\.json|secrets\.json|token\.json)$'; then
+            echo "SECURITY FAILURE: secret file tracked by Git"
+            exit 1
+          fi
+
+      - name: Final result
+        run: |
+          echo "========================================"
+          echo "SANYO AI AUTOMATION TEST = PASS"
+          echo "========================================"
+          echo "Provider layer      = PASS"
+          echo "Security layer      = PASS"
+          echo "Local runtime       = PASS"
+          echo "Repository structure = PASS"
+          echo "Secret protection   = PASS"
+          echo "========================================"
