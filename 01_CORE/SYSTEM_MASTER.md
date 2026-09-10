@@ -1,101 +1,30 @@
-# SANYO AI AUTOMATION — SYSTEM MASTER
+# SANYO AI OS — System 2 Execution Boundary
 
-## 1. Identity
+sanyo-ai-automation is **System 2: AI Content Production & Automation**.
 
-System: Sanyo AI Automation
-Brand: Sanyo Yusoki Vietnam
-Purpose: AI-assisted Marketing, Sales and Content Automation
+It receives approved work from System 1 (CLAUDE-WORKSPACE) through the versioned bridge contract in 06_N8N/SYSTEM1_BRIDGE_CONTRACT.json. It does not become a second knowledge base.
 
-## 2. Core Principles
+## System 2 owns
 
-- Customer first
-- Japanese quality mindset
-- Clear and trustworthy communication
-- Standardize before automating
-- Reuse proven knowledge
-- Version control everything
-- Kaizen continuously
+- Provider routing and credentials held outside Git
+- Video production, prompt assembly, character and consistency controls
+- Asset selection and production-output references
+- n8n orchestration, technical tests and delivery evidence
+- Measurement capture and return payloads
 
-## 3. Target Customer
+## System 1 owns
 
-Primary:
-- Homeowners in Vietnam
-- Multi-generation families
-- Families renovating existing houses
-- Narrow/tube houses
-- Urban homeowners requiring residential elevators
+- Brand, customer, product, sales and voice knowledge
+- Content strategy and the decision to approve a job
+- General quality-evaluation methodology
 
-Secondary:
-- Architects
-- Contractors
-- Interior designers
-- Real-estate developers
+## Non-negotiable runtime rules
 
-## 4. Brand Positioning
+1. A job must be approved and traceable before System 2 accepts it.
+2. System 2 must fail closed when a provider, approved asset or required character reference is unavailable.
+3. READY, GENERATED, TESTED and APPROVED are distinct states.
+4. No provider call, output claim or publication is implied by a design-time test.
 
-Sanyo Yusoki is positioned as:
+See the System 1 bridge document for the human-readable ownership and hand-off rules. This repository contains the deployed, machine-readable contract and its execution checks.
 
-Tinh hoa thang máy Nhật Bản
-
-Core communication:
-- Safety
-- Reliability
-- Japanese engineering
-- Long-term service
-- Family comfort
-- Professional after-sales support
-
-## 5. AI Responsibilities
-
-The AI system should assist with:
-
-- Marketing strategy
-- Content planning
-- Advertising copy
-- Video briefs
-- Video prompts
-- Sales materials
-- Customer communication
-- Lead qualification
-- Workflow automation
-- Knowledge management
-
-## 6. Content Rules
-
-Every content output should:
-
-1. Understand the customer problem
-2. Identify the emotional or practical concern
-3. Explain the solution clearly
-4. Demonstrate credibility
-5. Avoid exaggerated claims
-6. End with an appropriate call to action
-
-## 7. Workflow
-
-Knowledge
-→ Prompt
-→ Content Brief
-→ Production
-→ Review
-→ Publish
-→ Measure
-→ Improve
-
-## 8. Quality Gate
-
-Before publishing, check:
-
-- Accuracy
-- Brand consistency
-- Customer relevance
-- Clarity
-- Trustworthiness
-- Legal/safety sensitivity
-- CTA
-
-## 9. Version
-
-System Master: v1.0
-Status: Foundation
-git status
+Status: **INTEGRATION_READY — providers are not live**

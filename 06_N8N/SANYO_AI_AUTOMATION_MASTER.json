@@ -1,221 +1,200 @@
 {
-  "name": "SANYO AI Automation - Master",
+  "name": "SANYO AI OS | System 1 Bridge Intake",
+  "active": false,
+  "versionId": "sanyo-ai-os-bridge-v1.1",
+  "settings": {
+    "executionOrder": "v1"
+  },
   "nodes": [
     {
-      "parameters": {},
-      "id": "manual-trigger",
-      "name": "START",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [0, 300]
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sanyo/system1/jobs",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "system1-job-intake",
+      "name": "SYSTEM 1 JOB INTAKE",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 260]
     },
     {
       "parameters": {
-        "jsCode": "const now = new Date();\nconst run_id = `SANYO-${now.toISOString().replace(/[-:.TZ]/g,'')}-${Math.random().toString(36).slice(2,8)}`;\n\nreturn [{\n  json: {\n    run_id,\n    status: 'INTAKE',\n    created_at: now.toISOString(),\n    brand: 'Sanyo Yusoki Vietnam',\n    input: {\n      topic: 'REPLACE_TOPIC',\n      audience: 'REPLACE_AUDIENCE',\n      objective: 'REPLACE_OBJECTIVE',\n      platform: 'TikTok'\n    }\n  }\n}];"
+        "jsCode": "const job = $json.body && typeof $json.body === 'object' ? $json.body : $json; const errors = []; const has = (v) => typeof v === 'string' && v.trim().length > 0; const need = (v, f) => { if (!has(v)) errors.push('MISSING_REQUIRED_CONTEXT:' + f); }; if (job.contract_version !== '1.1') errors.push('INVALID_CONTRACT:contract_version'); if (!['ARTICLE','SOCIAL','IMAGE','VIDEO'].includes(job.task_type)) errors.push('INVALID_CONTRACT:task_type'); need(job.job_id, 'job_id'); if (job.source?.system !== 'CLAUDE_WORKSPACE') errors.push('INVALID_CONTRACT:source.system'); need(job.source?.project_id, 'source.project_id'); need(job.source?.task_id, 'source.task_id'); need(job.content?.objective, 'content.objective'); need(job.content?.audience, 'content.audience'); need(job.content?.platform, 'content.platform'); if (job.content?.approval_status !== 'APPROVED') errors.push('INVALID_CONTRACT:content.approval_status'); if (!Array.isArray(job.source_refs) || !job.source_refs.length) errors.push('MISSING_REQUIRED_CONTEXT:source_refs'); else job.source_refs.forEach((ref, i) => { if (!['FILE','URI'].includes(ref?.type) || ref?.status !== 'VERIFIED' || !(has(ref?.path) || has(ref?.uri))) errors.push('INVALID_CONTRACT:source_refs[' + i + ']'); }); if (!Array.isArray(job.assets)) errors.push('INVALID_CONTRACT:assets'); else if (job.assets.some(asset => asset?.status !== 'APPROVED')) errors.push('MISSING_APPROVED_ASSET'); if (!['SYNC_RESPONSE','CALLBACK_WEBHOOK','FILE_REFERENCE'].includes(job.return_delivery?.mode)) errors.push('INVALID_CONTRACT:return_delivery.mode'); if (job.return_delivery?.mode === 'CALLBACK_WEBHOOK' && !has(job.return_delivery.callback_url)) errors.push('MISSING_REQUIRED_CONTEXT:return_delivery.callback_url'); if (job.task_type === 'VIDEO') { if (!has(job.video?.brief_id) || job.video?.shot_plan_status !== 'APPROVED' || !Array.isArray(job.video?.shots) || !job.video.shots.length) errors.push('INVALID_CONTRACT:video'); if (typeof job.character?.required !== 'boolean') errors.push('MISSING_REQUIRED_CONTEXT:character.required'); if (job.character?.required && (!has(job.character.character_id) || !has(job.character.reference_asset_id) || job.character.identity_status !== 'APPROVED' || !job.assets.some(asset => asset?.asset_id === job.character.reference_asset_id && asset?.status === 'APPROVED'))) errors.push('MISSING_APPROVED_CHARACTER'); } return [{ json: { job, contract_validation: { status: errors.length ? 'FAIL' : 'PASS', errors } } }];"
       },
-      "id": "intake",
-      "name": "01 CONTENT INTAKE",
+      "id": "contract-validation",
+      "name": "01 CONTRACT VALIDATION",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $json;\nconst input = d.input || {};\n\nif (!input.topic || input.topic === 'REPLACE_TOPIC') {\n  throw new Error('INPUT ERROR: topic chưa được khai báo');\n}\n\nreturn [{ json: {\n  ...d,\n  status: 'CUSTOMER_INSIGHT',\n  customer_insight: {\n    problem: input.topic,\n    audience: input.audience,\n    desired_change: input.objective\n  }\n}}];"
-      },
-      "id": "insight",
-      "name": "02 CUSTOMER INSIGHT",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [440, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'CONTENT_GENERATION',\n  content: {\n    hook: '',\n    story: '',\n    analysis: '',\n    cta: ''\n  },\n  generation_instruction: `Tạo nội dung thương hiệu Sanyo Yusoki Vietnam dựa trên customer insight. Ưu tiên hữu ích, rõ ràng, đáng tin cậy; không phóng đại; CTA tự nhiên.`\n}}];"
-      },
-      "id": "content",
-      "name": "03 CONTENT GENERATION",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [660, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'VIDEO_BRIEF',\n  video_brief: {\n    duration_seconds: 60,\n    structure: ['HOOK 0-5s','STORY 5-25s','ANALYSIS 25-50s','CTA 50-60s'],\n    visual_direction: 'Japanese premium, trustworthy, family-oriented',\n    camera: 'natural cinematic movement',\n    audio: 'clear Vietnamese voiceover',\n    continuity_required: true\n  }\n}}];"
-      },
-      "id": "brief",
-      "name": "04 VIDEO BRIEF",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [880, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'PROMPT_ASSEMBLY',\n  prompts: {\n    master: '',\n    negative: 'distorted architecture, inconsistent elevator dimensions, unreadable text, extra people, duplicated objects, unstable geometry, unrealistic motion',\n    continuity: 'same architecture, same elevator design, same family appearance, consistent lighting and spatial relationships'\n  }\n}}];"
-      },
-      "id": "prompts",
-      "name": "05 PROMPT ASSEMBLY",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1100, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'ASSET_SELECTION',\n  assets: {\n    brand: true,\n    elevator: true,\n    cabin: true,\n    family: true,\n    architecture: true,\n    location: true,\n    material: true\n  }\n}}];"
-      },
-      "id": "assets",
-      "name": "06 ASSET SELECTION",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1320, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'VEO_PRODUCTION',\n  production: {\n    engine: 'VEO_3',\n    ready_for_generation: true,\n    prompt_ready: Boolean(d.prompts),\n    asset_ready: Boolean(d.assets)\n  }\n}}];"
-      },
-      "id": "veo",
-      "name": "07 VEO PRODUCTION",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1540, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const d = $json;\nconst checks = {\n  accuracy: true,\n  brand_consistency: true,\n  customer_relevance: true,\n  clarity: true,\n  trustworthiness: true,\n  legal_safety: true,\n  cta: true,\n  continuity: Boolean(d.production?.ready_for_generation)\n};\n\nconst failed = Object.entries(checks).filter(([,v]) => !v).map(([k]) => k);\n\nreturn [{ json: {\n  ...d,\n  status: failed.length ? 'QUALITY_FAIL' : 'QUALITY_PASS',\n  quality_gate: {\n    checks,\n    failed,\n    score: Object.values(checks).filter(Boolean).length / Object.keys(checks).length\n  }\n}}];"
-      },
-      "id": "quality",
-      "name": "08 QUALITY GATE",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1760, 300]
+      "position": [480, 260]
     },
     {
       "parameters": {
         "conditions": {
           "boolean": [
             {
-              "value1": "={{$json.quality_gate.score >= 1}}",
+              "value1": "={{ $json.contract_validation.status === 'PASS' }}",
               "operation": "true"
             }
           ]
         }
       },
-      "id": "quality-if",
-      "name": "QUALITY PASS?",
+      "id": "contract-valid",
+      "name": "CONTRACT VALID?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1980, 300]
+      "position": [700, 260]
     },
     {
       "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'HUMAN_REVIEW',\n  human_review: {\n    required: true,\n    decision: 'PENDING',\n    reviewer: '',\n    notes: ''\n  }\n}}];"
+        "jsCode": "const d = $json; return [{ json: { result: { contract_version: '1.1', job_id: d.job?.job_id || null, task_type: d.job?.task_type || null, execution: { status: 'BLOCKED', provider: null, model: null, output_reference: null, error: { code: 'INVALID_CONTRACT', detail: d.contract_validation.errors } }, technical_test: { status: 'NOT_RUN', tests: [] }, quality_evaluation: { status: 'NOT_RUN', criteria: [], critical_failures: [] }, identity_evaluation: { status: d.job?.task_type === 'VIDEO' ? 'NOT_RUN' : 'NOT_APPLICABLE', character_id: d.job?.character?.character_id || null, character_lock: 'NOT_LOCKED', per_shot: [], identity_drift: 'NOT_EVALUATED' }, human_review: { status: 'NOT_RUN' }, delivery: { mode: d.job?.return_delivery?.mode || 'SYNC_RESPONSE', delivered: true }, next_action: 'BLOCK' } } }];"
       },
-      "id": "review",
-      "name": "09 HUMAN REVIEW",
+      "id": "invalid-contract-result",
+      "name": "INVALID CONTRACT RESULT",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2200, 220]
+      "position": [940, 420]
     },
     {
       "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'CALIBRATED',\n  calibration: {\n    required: true,\n    brand_check: 'PASS',\n    customer_check: 'PASS',\n    visual_check: 'PASS',\n    message_check: 'PASS',\n    final_adjustment: 'PENDING'\n  }\n}}];"
+        "jsCode": "const d = $json; const job = d.job; let character_lock; if (job.task_type !== 'VIDEO') character_lock = { status: 'NOT_APPLICABLE', qc_required_per_shot: false }; else if (!job.character.required) character_lock = { status: 'NOT_REQUIRED', qc_required_per_shot: false }; else character_lock = { status: 'LOCKED', character_id: job.character.character_id, reference_asset_id: job.character.reference_asset_id, qc_required_per_shot: true, expected_shot_ids: job.video.shots.map(shot => shot.shot_id).filter(Boolean) }; return [{ json: { ...d, character_lock } }];"
       },
-      "id": "calibration",
-      "name": "10 CALIBRATION",
+      "id": "character-lock",
+      "name": "02 CHARACTER LOCK",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2420, 220]
+      "position": [940, 160]
     },
     {
       "parameters": {
-        "jsCode": "const d = $json;\nconst output = {\n  run_id: d.run_id,\n  status: 'FINAL',\n  generated_at: new Date().toISOString(),\n  brand: d.brand,\n  customer_insight: d.customer_insight,\n  content: d.content,\n  video_brief: d.video_brief,\n  prompts: d.prompts,\n  assets: d.assets,\n  quality_gate: d.quality_gate,\n  calibration: d.calibration,\n  production: d.production\n};\n\nreturn [{ json: output }];"
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.character_lock.status !== 'BLOCKED' }}",
+              "operation": "true"
+            }
+          ]
+        }
       },
-      "id": "output",
-      "name": "11 OUTPUT",
-      "type": "n8n-nodes-base.code",
+      "id": "character-locked",
+      "name": "CHARACTER LOCKED?",
+      "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2640, 220]
+      "position": [1180, 160]
     },
     {
       "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'MEASUREMENT_READY',\n  measurement: {\n    run_id: d.run_id,\n    platform: d.input?.platform || 'unknown',\n    metrics_to_collect: ['views','watch_time','completion_rate','engagement_rate','leads','contracts'],\n    learning_loop: true\n  }\n}}];"
+        "jsCode": "const d = $json; return [{ json: { result: { contract_version: '1.1', job_id: d.job.job_id, task_type: d.job.task_type, execution: { status: 'BLOCKED', provider: null, model: null, output_reference: null, error: { code: 'MISSING_APPROVED_CHARACTER', detail: ['Approved character reference is required before video production.'] } }, technical_test: { status: 'NOT_RUN', tests: [] }, quality_evaluation: { status: 'NOT_RUN', criteria: [], critical_failures: [] }, identity_evaluation: { status: 'NOT_RUN', character_id: d.job.character?.character_id || null, character_lock: 'NOT_LOCKED', per_shot: [], identity_drift: 'NOT_EVALUATED' }, human_review: { status: 'NOT_RUN' }, delivery: { mode: d.job.return_delivery.mode, delivered: true }, next_action: 'BLOCK' } } }];"
       },
-      "id": "measurement",
-      "name": "12 MEASUREMENT",
+      "id": "character-block-result",
+      "name": "CHARACTER BLOCK RESULT",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2860, 220]
+      "position": [1420, 360]
     },
     {
       "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  ...d,\n  status: 'LEARNING_LOOP',\n  next_action: 'Store performance data and feed validated insights into the next content generation cycle.'\n}}];"
+        "jsCode": "const d = $json; const capability = { ARTICLE: 'TEXT', SOCIAL: 'TEXT', IMAGE: 'IMAGE', VIDEO: 'VIDEO' }[d.job.task_type]; const env = { TEXT: ['SANYO_TEXT_PROVIDER','SANYO_TEXT_MODEL','SANYO_TEXT_PROVIDER_STATUS'], IMAGE: ['SANYO_IMAGE_PROVIDER','SANYO_IMAGE_MODEL','SANYO_IMAGE_PROVIDER_STATUS'], VIDEO: ['SANYO_VIDEO_PROVIDER','SANYO_VIDEO_MODEL','SANYO_VIDEO_PROVIDER_STATUS'] }[capability]; const provider = env ? $env[env[0]] || null : null; const model = env ? $env[env[1]] || null : null; const verified = env && $env[env[2]] === 'LIVE_VERIFIED'; const provider_readiness = { capability, provider, model, state: verified && provider && model ? 'READY_FOR_EXECUTOR' : 'NOT_CONNECTED', reason: verified && provider && model ? 'CREDENTIAL_AUDIT_REQUIRED_BEFORE_EXECUTION' : 'PROVIDER_NOT_CONNECTED' }; return [{ json: { ...d, provider_readiness } }];"
       },
-      "id": "learning",
-      "name": "13 LEARNING LOOP",
+      "id": "provider-readiness",
+      "name": "03 PROVIDER READINESS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3080, 220]
+      "position": [1420, 100]
     },
     {
       "parameters": {
-        "jsCode": "const d = $json;\nreturn [{ json: {\n  run_id: d.run_id,\n  status: 'ERROR_REVIEW_REQUIRED',\n  failed_checks: d.quality_gate?.failed || [],\n  retry_policy: 'Return to content/prompt stage after correction; never publish failed output.'\n}}];"
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.provider_readiness.state === 'READY_FOR_EXECUTOR' }}",
+              "operation": "true"
+            }
+          ]
+        }
       },
-      "id": "error-route",
-      "name": "QUALITY FAIL / RETRY",
+      "id": "provider-live",
+      "name": "PROVIDER EXECUTOR READY?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1660, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json; const identityStatus = d.job.task_type === 'VIDEO' ? 'NOT_RUN' : 'NOT_APPLICABLE'; return [{ json: { result: { contract_version: '1.1', job_id: d.job.job_id, task_type: d.job.task_type, execution: { status: 'BLOCKED', provider: d.provider_readiness.provider, model: d.provider_readiness.model, capability: d.provider_readiness.capability, output_reference: null, error: { code: 'PROVIDER_NOT_CONNECTED', detail: [d.provider_readiness.reason] } }, technical_test: { status: 'NOT_RUN', tests: [] }, quality_evaluation: { status: 'NOT_RUN', criteria: [], critical_failures: [] }, identity_evaluation: { status: identityStatus, character_id: d.job.character?.character_id || null, character_lock: d.character_lock.status, per_shot: [], identity_drift: 'NOT_EVALUATED' }, human_review: { status: 'NOT_RUN' }, delivery: { mode: d.job.return_delivery.mode, delivered: true }, next_action: 'BLOCK' } } }];"
+      },
+      "id": "provider-block-result",
+      "name": "PROVIDER NOT CONNECTED RESULT",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2200, 430]
+      "position": [1920, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json; return [{ json: { result: { contract_version: '1.1', job_id: d.job.job_id, task_type: d.job.task_type, execution: { status: 'BLOCKED', provider: d.provider_readiness.provider, model: d.provider_readiness.model, capability: d.provider_readiness.capability, output_reference: null, error: { code: 'PROVIDER_EXECUTOR_NOT_DEPLOYED', detail: ['Credential status was declared ready, but no provider executor is present in this workflow.'] } }, technical_test: { status: 'NOT_RUN', tests: [] }, quality_evaluation: { status: 'NOT_RUN', criteria: [], critical_failures: [] }, identity_evaluation: { status: d.job.task_type === 'VIDEO' ? 'NOT_RUN' : 'NOT_APPLICABLE', character_id: d.job.character?.character_id || null, character_lock: d.character_lock.status, per_shot: [], identity_drift: 'NOT_EVALUATED' }, human_review: { status: 'NOT_RUN' }, delivery: { mode: d.job.return_delivery.mode, delivered: true }, next_action: 'BLOCK' } } }];"
+      },
+      "id": "executor-not-deployed-result",
+      "name": "PROVIDER EXECUTOR NOT DEPLOYED RESULT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 60]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.result }}",
+        "options": {}
+      },
+      "id": "system2-result-return",
+      "name": "SYSTEM 2 RESULT RETURN",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2180, 220]
     }
   ],
   "connections": {
-    "START": {
-      "main": [[{"node": "01 CONTENT INTAKE", "type": "main", "index": 0}]]
+    "SYSTEM 1 JOB INTAKE": {
+      "main": [[{ "node": "01 CONTRACT VALIDATION", "type": "main", "index": 0 }]]
     },
-    "01 CONTENT INTAKE": {
-      "main": [[{"node": "02 CUSTOMER INSIGHT", "type": "main", "index": 0}]]
+    "01 CONTRACT VALIDATION": {
+      "main": [[{ "node": "CONTRACT VALID?", "type": "main", "index": 0 }]]
     },
-    "02 CUSTOMER INSIGHT": {
-      "main": [[{"node": "03 CONTENT GENERATION", "type": "main", "index": 0}]]
-    },
-    "03 CONTENT GENERATION": {
-      "main": [[{"node": "04 VIDEO BRIEF", "type": "main", "index": 0}]]
-    },
-    "04 VIDEO BRIEF": {
-      "main": [[{"node": "05 PROMPT ASSEMBLY", "type": "main", "index": 0}]]
-    },
-    "05 PROMPT ASSEMBLY": {
-      "main": [[{"node": "06 ASSET SELECTION", "type": "main", "index": 0}]]
-    },
-    "06 ASSET SELECTION": {
-      "main": [[{"node": "07 VEO PRODUCTION", "type": "main", "index": 0}]]
-    },
-    "07 VEO PRODUCTION": {
-      "main": [[{"node": "08 QUALITY GATE", "type": "main", "index": 0}]]
-    },
-    "08 QUALITY GATE": {
-      "main": [[{"node": "QUALITY PASS?", "type": "main", "index": 0}]]
-    },
-    "QUALITY PASS?": {
+    "CONTRACT VALID?": {
       "main": [
-        [{"node": "09 HUMAN REVIEW", "type": "main", "index": 0}],
-        [{"node": "QUALITY FAIL / RETRY", "type": "main", "index": 0}]
+        [{ "node": "02 CHARACTER LOCK", "type": "main", "index": 0 }],
+        [{ "node": "INVALID CONTRACT RESULT", "type": "main", "index": 0 }]
       ]
     },
-    "09 HUMAN REVIEW": {
-      "main": [[{"node": "10 CALIBRATION", "type": "main", "index": 0}]]
+    "INVALID CONTRACT RESULT": {
+      "main": [[{ "node": "SYSTEM 2 RESULT RETURN", "type": "main", "index": 0 }]]
     },
-    "10 CALIBRATION": {
-      "main": [[{"node": "11 OUTPUT", "type": "main", "index": 0}]]
+    "02 CHARACTER LOCK": {
+      "main": [[{ "node": "CHARACTER LOCKED?", "type": "main", "index": 0 }]]
     },
-    "11 OUTPUT": {
-      "main": [[{"node": "12 MEASUREMENT", "type": "main", "index": 0}]]
+    "CHARACTER LOCKED?": {
+      "main": [
+        [{ "node": "03 PROVIDER READINESS", "type": "main", "index": 0 }],
+        [{ "node": "CHARACTER BLOCK RESULT", "type": "main", "index": 0 }]
+      ]
     },
-    "12 MEASUREMENT": {
-      "main": [[{"node": "13 LEARNING LOOP", "type": "main", "index": 0}]]
+    "CHARACTER BLOCK RESULT": {
+      "main": [[{ "node": "SYSTEM 2 RESULT RETURN", "type": "main", "index": 0 }]]
+    },
+    "03 PROVIDER READINESS": {
+      "main": [[{ "node": "PROVIDER EXECUTOR READY?", "type": "main", "index": 0 }]]
+    },
+    "PROVIDER EXECUTOR READY?": {
+      "main": [
+        [{ "node": "PROVIDER EXECUTOR NOT DEPLOYED RESULT", "type": "main", "index": 0 }],
+        [{ "node": "PROVIDER NOT CONNECTED RESULT", "type": "main", "index": 0 }]
+      ]
+    },
+    "PROVIDER NOT CONNECTED RESULT": {
+      "main": [[{ "node": "SYSTEM 2 RESULT RETURN", "type": "main", "index": 0 }]]
+    },
+    "PROVIDER EXECUTOR NOT DEPLOYED RESULT": {
+      "main": [[{ "node": "SYSTEM 2 RESULT RETURN", "type": "main", "index": 0 }]]
     }
-  },
-  "pinData": {},
-  "active": false,
-  "settings": {},
-  "versionId": "sanyo-ai-automation-v1"
+  }
 }

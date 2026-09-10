@@ -1,77 +1,38 @@
 const fs = require('fs');
+const config = require('../10_API_CONFIG/API_CONFIG_MASTER.json');
+const { describeRoutes } = require('./provider_mapping');
 
-const files = [
+let failed = 0;
+
+function check(condition, message) {
+  console.log((condition ? 'PASS' : 'FAIL') + ' - ' + message);
+  if (!condition) failed += 1;
+}
+
+[
   '09_AI_PROVIDER/AI_PROVIDER_MASTER.md',
   '09_AI_PROVIDER/PROVIDER_REGISTRY.md',
   '09_AI_PROVIDER/AI_ROUTER.md',
   '09_AI_PROVIDER/API_CONFIG.md',
   '09_AI_PROVIDER/PROVIDER_TEST.md'
-];
+].forEach(file => check(fs.existsSync(file), file));
 
-console.log('========================================');
-console.log('SANYO AI PROVIDER OFFLINE TEST');
-console.log('========================================');
+check(config.security.keys_from_environment === true, 'credentials are read from the environment only');
+check(config.security.commit_secrets === false, 'credential commits are forbidden');
+check(config.providers.openai.enabled === false, 'OpenAI is disabled until explicitly audited');
+check(config.providers.anthropic.enabled === false, 'Anthropic is disabled until explicitly audited');
+check(config.providers.google.enabled === false, 'Google/VEO is disabled until explicitly audited');
+check(config.providers.google.api_key_env === 'GOOGLE_API_KEY', 'Google credential variable is consistent');
 
-let failed = false;
-
-for (const file of files) {
-  if (fs.existsSync(file)) {
-    console.log(`PASS - ${file}`);
-  } else {
-    console.log(`FAIL - ${file}`);
-    failed = true;
-  }
-}
-
-const content = files
-  .map(f => fs.readFileSync(f, 'utf8'))
-  .join('\n');
-
-const forbidden = [
-  'sk-',
-  'AIza',
-  'api_key=',
-  'API_KEY='
-];
-
-for (const token of forbidden) {
-  if (content.includes(token)) {
-    console.log(`FAIL - possible secret detected: ${token}`);
-    failed = true;
-  }
-}
-
-const required = [
-  'TEXT',
-  'REASONING',
-  'IMAGE',
-  'VIDEO',
-  'VOICE',
-  'KNOWLEDGE',
-  'FALLBACK',
-  'HUMAN REVIEW',
-  'QUALITY GATE'
-];
-
-for (const token of required) {
-  if (content.includes(token)) {
-    console.log(`PASS - capability/rule: ${token}`);
-  } else {
-    console.log(`FAIL - missing: ${token}`);
-    failed = true;
-  }
-}
-
-console.log('========================================');
+const routes = describeRoutes();
+check(routes.length === 4, 'readiness is calculated for four bridge task types');
+check(routes.every(route => route.state === 'NOT_CONNECTED'), 'current provider state is fail-closed');
+check(routes.every(route => route.model === null), 'no model is claimed from an absent runtime configuration');
 
 if (failed) {
-  console.log('SANYO AI PROVIDER = FAIL');
-  process.exit(1);
+  console.log('SANYO AI PROVIDER READINESS = FAIL');
+  process.exitCode = 1;
+} else {
+  console.log('SANYO AI PROVIDER READINESS = PASS');
+  console.log('MODE = OFFLINE / INTEGRATION_READY; no API request was made.');
 }
-
-console.log('SANYO AI PROVIDER = PASS');
-console.log('OFFLINE MODE = PASS');
-console.log('NO API KEY REQUIRED');
-console.log('n8n = NOT REQUIRED');
-console.log('VPN = NOT REQUIRED');
-console.log('========================================');

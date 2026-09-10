@@ -5,6 +5,7 @@ const ROOT = process.cwd();
 
 const required = [
   '06_N8N/SANYO_AI_AUTOMATION_MASTER.json',
+  '06_N8N/SYSTEM1_BRIDGE_CONTRACT.json',
   '07_WORKFLOWS/WF-10_CALIBRATION.md',
   '08_OUTPUT/FINAL_OUTPUT_RULES.md',
   '09_AI_PROVIDER/AI_PROVIDER_MASTER.md',
@@ -36,6 +37,7 @@ console.log('=== PIPELINE GATE ===');
 const gates = {
   SECURITY: failed.includes('11_SECURITY/security_test.js') ? false : true,
   N8N_MASTER: failed.includes('06_N8N/SANYO_AI_AUTOMATION_MASTER.json') ? false : true,
+  BRIDGE_CONTRACT: failed.includes('06_N8N/SYSTEM1_BRIDGE_CONTRACT.json') ? false : true,
   CALIBRATION: failed.includes('07_WORKFLOWS/WF-10_CALIBRATION.md') ? false : true,
   OUTPUT_RULES: failed.includes('08_OUTPUT/FINAL_OUTPUT_RULES.md') ? false : true,
   AI_PROVIDER: failed.includes('09_AI_PROVIDER/AI_PROVIDER_MASTER.md') ? false : true,
@@ -47,20 +49,23 @@ for (const [name, value] of Object.entries(gates)) {
 }
 
 const allPass = Object.values(gates).every(Boolean);
+const { describeRoutes } = require('../09_AI_PROVIDER/provider_mapping');
+const routes = describeRoutes();
+const liveRoutes = routes.filter(route => route.state === 'READY_FOR_EXECUTOR');
 
 console.log('');
 console.log('=== FINAL DECISION ===');
 
 if (allPass) {
   console.log('SECURITY GATE   = PASS');
-  console.log('CALIBRATION     = PASS');
-  console.log('OUTPUT GATE     = PASS');
-  console.log('AI PROVIDER     = READY');
-  console.log('API LAYER       = READY');
-  console.log('N8N MASTER      = READY');
+  console.log('CALIBRATION     = CONTRACTUAL GATE ONLY');
+  console.log('OUTPUT GATE     = FAIL-CLOSED');
+  console.log(`AI PROVIDER     = ${liveRoutes.length ? 'READY_FOR_EXECUTOR' : 'NOT_CONNECTED'}`);
+  console.log('API LAYER       = INTEGRATION_READY');
+  console.log('N8N MASTER      = INTEGRATION_READY');
   console.log('');
-  console.log('LOCAL RUNTIME   = READY');
-  console.log('OUTPUT          = ALLOWED');
+  console.log('LOCAL RUNTIME   = INTEGRATION_READY');
+  console.log('OUTPUT          = BLOCKED UNTIL EVIDENCE EXISTS');
 } else {
   console.log('LOCAL RUNTIME   = BLOCKED');
   console.log('OUTPUT          = BLOCKED');

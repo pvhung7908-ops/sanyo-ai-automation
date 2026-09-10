@@ -1,232 +1,106 @@
 const fs = require('fs');
 
 const MASTER = '06_N8N/SANYO_AI_AUTOMATION_MASTER.json';
+const CONTRACT = '06_N8N/SYSTEM1_BRIDGE_CONTRACT.json';
+let failed = 0;
 
-console.log('');
-console.log('==========================================');
-console.log(' SANYO AI AUTOMATION v2 - OFFLINE TEST');
-console.log('==========================================');
+function pass(message) {
+  console.log('PASS - ' + message);
+}
+
+function fail(message) {
+  console.error('FAIL - ' + message);
+  failed += 1;
+}
+
+function check(condition, message) {
+  condition ? pass(message) : fail(message);
+}
 
 let workflow;
+let contract;
 
 try {
   workflow = JSON.parse(fs.readFileSync(MASTER, 'utf8'));
-  console.log('PASS 01 - MASTER JSON đọc được');
-} catch (err) {
-  console.error('FAIL 01 - MASTER JSON không hợp lệ');
-  process.exit(1);
+  pass('bridge workflow JSON parses');
+} catch (error) {
+  fail('bridge workflow JSON parses');
 }
 
-const nodes = workflow.nodes || [];
-const connections = workflow.connections || {};
-
-const nodeNames = nodes.map(n => n.name);
-
-function requireNode(name) {
-  if (!nodeNames.includes(name)) {
-    console.error(`FAIL - Thiếu node: ${name}`);
-    process.exit(1);
-  }
-  console.log(`PASS - Node: ${name}`);
+try {
+  contract = JSON.parse(fs.readFileSync(CONTRACT, 'utf8'));
+  pass('bridge contract JSON parses');
+} catch (error) {
+  fail('bridge contract JSON parses');
 }
 
-console.log('');
-console.log('=== CHECK CORE PIPELINE ===');
+if (workflow && contract) {
+  check(contract.contract_version === '1.1', 'contract version is 1.1');
+  check(
+    ['ARTICLE', 'SOCIAL', 'IMAGE', 'VIDEO'].every(type => contract.job.task_types.includes(type)),
+    'contract supports all four System 1 job types'
+  );
 
-[
-  'START',
-  '01 CONTENT INTAKE',
-  '02 CUSTOMER INSIGHT',
-  '03 CONTENT GENERATION',
-  '04 VIDEO BRIEF',
-  '05 PROMPT ASSEMBLY',
-  '06 ASSET SELECTION',
-  '07 VEO PRODUCTION',
-  '08 QUALITY GATE',
-  'QUALITY PASS?',
-  '09 HUMAN REVIEW',
-  '10 CALIBRATION',
-  '11 OUTPUT',
-  '12 MEASUREMENT',
-  '13 LEARNING LOOP',
-  'QUALITY FAIL / RETRY'
-].forEach(requireNode);
+  const nodes = workflow.nodes || [];
+  const nodeByName = new Map(nodes.map(node => [node.name, node]));
+  const nodeNames = [
+    'SYSTEM 1 JOB INTAKE',
+    '01 CONTRACT VALIDATION',
+    'CONTRACT VALID?',
+    'INVALID CONTRACT RESULT',
+    '02 CHARACTER LOCK',
+    'CHARACTER LOCKED?',
+    '03 PROVIDER READINESS',
+    'PROVIDER EXECUTOR READY?',
+    'PROVIDER NOT CONNECTED RESULT',
+    'PROVIDER EXECUTOR NOT DEPLOYED RESULT',
+    'SYSTEM 2 RESULT RETURN'
+  ];
 
-console.log('');
-console.log('=== CHECK CALIBRATION GATE ===');
+  nodeNames.forEach(name => check(nodeByName.has(name), 'node exists: ' + name));
+  check(nodeByName.get('SYSTEM 1 JOB INTAKE')?.type === 'n8n-nodes-base.webhook', 'System 1 enters through a webhook');
+  check(nodeByName.get('SYSTEM 2 RESULT RETURN')?.type === 'n8n-nodes-base.respondToWebhook', 'System 2 returns through the same request');
 
-const reviewIndex = nodeNames.indexOf('09 HUMAN REVIEW');
-const calibrationIndex = nodeNames.indexOf('10 CALIBRATION');
-const outputIndex = nodeNames.indexOf('11 OUTPUT');
+  const validationCode = nodeByName.get('01 CONTRACT VALIDATION')?.parameters?.jsCode || '';
+  [
+    'ARTICLE',
+    'SOCIAL',
+    'IMAGE',
+    'VIDEO',
+    'content.approval_status',
+    'source_refs',
+    'MISSING_APPROVED_ASSET',
+    'MISSING_APPROVED_CHARACTER',
+    'shot_plan_status'
+  ].forEach(token => check(validationCode.includes(token), 'validation enforces ' + token));
 
-if (reviewIndex < 0 || calibrationIndex < 0 || outputIndex < 0) {
-  console.error('FAIL - Không tìm thấy Review / Calibration / Output');
-  process.exit(1);
+  const lockCode = nodeByName.get('02 CHARACTER LOCK')?.parameters?.jsCode || '';
+  check(lockCode.includes("status: 'LOCKED'"), 'approved character reference produces a character lock');
+  check(lockCode.includes('qc_required_per_shot: true'), 'locked character requires per-shot identity QC');
+
+  const allCode = nodes.map(node => node.parameters?.jsCode || '').join('\n');
+  check(!allCode.includes("ready_for_generation: true"), 'workflow does not declare generation ready without evidence');
+  check(!allCode.includes("status: 'FINAL'"), 'workflow does not fabricate final output');
+  check(allCode.includes('PROVIDER_NOT_CONNECTED'), 'workflow fails closed when a provider is unavailable');
+  check(allCode.includes('PROVIDER_EXECUTOR_NOT_DEPLOYED'), 'workflow cannot claim execution when no executor exists');
+
+  const connections = workflow.connections || {};
+  const hasConnection = (from, to) => JSON.stringify(connections[from] || {}).includes('"node":"' + to + '"') || JSON.stringify(connections[from] || {}).includes('"node": "' + to + '"');
+  [
+    ['SYSTEM 1 JOB INTAKE', '01 CONTRACT VALIDATION'],
+    ['01 CONTRACT VALIDATION', 'CONTRACT VALID?'],
+    ['CONTRACT VALID?', '02 CHARACTER LOCK'],
+    ['02 CHARACTER LOCK', 'CHARACTER LOCKED?'],
+    ['CHARACTER LOCKED?', '03 PROVIDER READINESS'],
+    ['03 PROVIDER READINESS', 'PROVIDER EXECUTOR READY?'],
+    ['PROVIDER NOT CONNECTED RESULT', 'SYSTEM 2 RESULT RETURN']
+  ].forEach(([from, to]) => check(hasConnection(from, to), 'connection ' + from + ' -> ' + to));
 }
 
-if (!(reviewIndex < calibrationIndex && calibrationIndex < outputIndex)) {
-  console.error('FAIL - Thứ tự REVIEW -> CALIBRATION -> OUTPUT sai');
-  process.exit(1);
+if (failed) {
+  console.error('Bridge workflow test failed: ' + failed + ' assertion(s).');
+  process.exitCode = 1;
+} else {
+  console.log('SANYO BRIDGE WORKFLOW = PASS');
+  console.log('MODE = INTEGRATION_READY (no provider executor invoked)');
 }
-
-console.log('PASS - HUMAN REVIEW -> CALIBRATION -> OUTPUT');
-
-console.log('');
-console.log('=== CHECK QUALITY GATE ===');
-
-const qualityNode = nodes.find(n => n.name === '08 QUALITY GATE');
-
-if (!qualityNode) {
-  console.error('FAIL - Không có QUALITY GATE');
-  process.exit(1);
-}
-
-const qualityCode = qualityNode.parameters?.jsCode || '';
-
-[
-  'accuracy',
-  'brand_consistency',
-  'customer_relevance',
-  'clarity',
-  'trustworthiness',
-  'legal_safety',
-  'cta',
-  'continuity'
-].forEach(check => {
-  if (!qualityCode.includes(check)) {
-    console.error(`FAIL - QUALITY GATE thiếu: ${check}`);
-    process.exit(1);
-  }
-});
-
-console.log('PASS - 8 tiêu chí Quality Gate tồn tại');
-
-console.log('');
-console.log('=== CHECK CALIBRATION CONTENT ===');
-
-const calibrationNode = nodes.find(n => n.name === '10 CALIBRATION');
-const calibrationCode = calibrationNode?.parameters?.jsCode || '';
-
-[
-  'brand_check',
-  'customer_check',
-  'visual_check',
-  'message_check',
-  'final_adjustment'
-].forEach(check => {
-  if (!calibrationCode.includes(check)) {
-    console.error(`FAIL - CALIBRATION thiếu: ${check}`);
-    process.exit(1);
-  }
-});
-
-console.log('PASS - Calibration có đầy đủ 5 lớp kiểm tra');
-
-console.log('');
-console.log('=== CHECK OUTPUT ===');
-
-const outputNode = nodes.find(n => n.name === '11 OUTPUT');
-const outputCode = outputNode?.parameters?.jsCode || '';
-
-[
-  'run_id',
-  'customer_insight',
-  'content',
-  'video_brief',
-  'prompts',
-  'assets',
-  'quality_gate',
-  'calibration',
-  'production'
-].forEach(field => {
-  if (!outputCode.includes(field)) {
-    console.error(`FAIL - OUTPUT thiếu: ${field}`);
-    process.exit(1);
-  }
-});
-
-console.log('PASS - OUTPUT chứa dữ liệu cần thiết');
-
-console.log('');
-console.log('=== CHECK MEASUREMENT ===');
-
-const measurementNode = nodes.find(n => n.name === '12 MEASUREMENT');
-const measurementCode = measurementNode?.parameters?.jsCode || '';
-
-[
-  'views',
-  'watch_time',
-  'completion_rate',
-  'engagement_rate',
-  'leads',
-  'contracts',
-  'learning_loop'
-].forEach(metric => {
-  if (!measurementCode.includes(metric)) {
-    console.error(`FAIL - MEASUREMENT thiếu: ${metric}`);
-    process.exit(1);
-  }
-});
-
-console.log('PASS - Measurement + Learning Loop tồn tại');
-
-console.log('');
-console.log('=== CHECK RETRY PATH ===');
-
-const retryNode = nodes.find(n => n.name === 'QUALITY FAIL / RETRY');
-
-if (!retryNode) {
-  console.error('FAIL - Không có QUALITY FAIL / RETRY');
-  process.exit(1);
-}
-
-const retryCode = retryNode.parameters?.jsCode || '';
-
-if (!retryCode.includes('never publish failed output')) {
-  console.error('FAIL - Retry policy không chặn failed output');
-  process.exit(1);
-}
-
-console.log('PASS - Failed output bị chặn');
-
-console.log('');
-console.log('=== CHECK CONNECTIONS ===');
-
-const requiredConnections = [
-  ['START', '01 CONTENT INTAKE'],
-  ['01 CONTENT INTAKE', '02 CUSTOMER INSIGHT'],
-  ['02 CUSTOMER INSIGHT', '03 CONTENT GENERATION'],
-  ['03 CONTENT GENERATION', '04 VIDEO BRIEF'],
-  ['04 VIDEO BRIEF', '05 PROMPT ASSEMBLY'],
-  ['05 PROMPT ASSEMBLY', '06 ASSET SELECTION'],
-  ['06 ASSET SELECTION', '07 VEO PRODUCTION'],
-  ['07 VEO PRODUCTION', '08 QUALITY GATE'],
-  ['08 QUALITY GATE', 'QUALITY PASS?'],
-  ['09 HUMAN REVIEW', '10 CALIBRATION'],
-  ['10 CALIBRATION', '11 OUTPUT'],
-  ['11 OUTPUT', '12 MEASUREMENT'],
-  ['12 MEASUREMENT', '13 LEARNING LOOP']
-];
-
-for (const [from, to] of requiredConnections) {
-  const target = JSON.stringify(connections[from] || {});
-  if (!target.includes(to)) {
-    console.error(`FAIL - Connection thiếu: ${from} -> ${to}`);
-    process.exit(1);
-  }
-}
-
-console.log('PASS - Core connections tồn tại');
-
-console.log('');
-console.log('==========================================');
-console.log(' SANYO AI AUTOMATION v2 = PASS');
-console.log('==========================================');
-console.log('');
-console.log('CALIBRATION GATE = PASS');
-console.log('FINAL OUTPUT GATE = PASS');
-console.log('QUALITY FAIL RETRY = PASS');
-console.log('MEASUREMENT LOOP = PASS');
-console.log('');
-console.log('OUTPUT = ALLOWED');
-console.log('');
