@@ -1,45 +1,30 @@
-const routes = {
-  CONTENT: "TEXT",
-  CUSTOMER_INSIGHT: "REASONING",
-  PROMPT_ASSEMBLY: "TEXT/REASONING",
-  IMAGE_ASSET: "IMAGE",
-  VIDEO_PRODUCTION: "VIDEO",
-  VOICE: "VOICE",
-  KNOWLEDGE: "KNOWLEDGE",
-  PROVIDER_FAILURE: "FALLBACK",
-  HUMAN_REVIEW: "HUMAN_REVIEW",
-  QUALITY_GATE: "QUALITY_GATE"
+const { routeJob } = require('./provider_mapping');
+
+const expected = {
+  ARTICLE: 'TEXT',
+  SOCIAL: 'TEXT',
+  IMAGE: 'IMAGE',
+  VIDEO: 'VIDEO'
 };
 
-console.log("=== SANYO AI ROUTING MATRIX ===");
+let failed = 0;
 
-for (const [task, provider] of Object.entries(routes)) {
-  if (!provider) {
-    console.log(`FAIL - ${task}`);
-    process.exitCode = 1;
-  } else {
-    console.log(`PASS - ${task} -> ${provider}`);
-  }
+for (const [taskType, capability] of Object.entries(expected)) {
+  const route = routeJob(taskType);
+  const valid = route.capability === capability && route.state === 'NOT_CONNECTED';
+  console.log((valid ? 'PASS' : 'FAIL') + ' - ' + taskType + ' -> ' + capability + ' (' + route.state + ')');
+  if (!valid) failed += 1;
 }
 
-const allPass = Object.values(routes).every(Boolean);
+const unknown = routeJob('UNKNOWN');
+const unknownBlocked = unknown.state === 'NOT_CONNECTED' && unknown.reason === 'UNMAPPED_CAPABILITY';
+console.log((unknownBlocked ? 'PASS' : 'FAIL') + ' - unknown capability is blocked');
+if (!unknownBlocked) failed += 1;
 
-console.log("");
-console.log("=== ROUTER DECISION ===");
-
-if (allPass) {
-  console.log("AI ROUTER = PASS");
-  console.log("PROVIDER FALLBACK = READY");
-  console.log("CORE / PROVIDER SEPARATION = PASS");
-} else {
-  console.log("AI ROUTER = FAIL");
+if (failed) {
+  console.log('SANYO AI ROUTER = FAIL');
   process.exitCode = 1;
+} else {
+  console.log('SANYO AI ROUTER = PASS');
+  console.log('ROUTING = VALID; PROVIDERS = NOT_CONNECTED');
 }
-
-console.log("");
-console.log("=== NON-NEGOTIABLE GATES ===");
-console.log("API KEY PROTECTION = REQUIRED");
-console.log("QUALITY GATE = REQUIRED");
-console.log("CALIBRATION = REQUIRED");
-console.log("HUMAN REVIEW = REQUIRED");
-console.log("VALIDATED OUTPUT ONLY = REQUIRED");

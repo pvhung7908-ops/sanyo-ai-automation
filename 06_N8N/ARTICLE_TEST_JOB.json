@@ -1,0 +1,27 @@
+{
+  "contract_version": "1.1",
+  "job_id": "SYV-BRIDGE-TEST-001",
+  "task_type": "ARTICLE",
+  "source": {
+    "system": "CLAUDE_WORKSPACE",
+    "project_id": "THANG-MAY",
+    "task_id": "BRIDGE-TEST-001"
+  },
+  "content": {
+    "objective": "Viết bài giới thiệu giải pháp thang máy gia đình",
+    "audience": "Gia đình cải tạo nhà",
+    "platform": "WEBSITE",
+    "approval_status": "APPROVED"
+  },
+  "source_refs": [
+    {
+      "type": "FILE",
+      "status": "VERIFIED",
+      "path": "01_BRAIN"
+    }
+  ],
+  "assets": [],
+  "return_delivery": {
+    "mode": "SYNC_RESPONSE"
+  }
+}

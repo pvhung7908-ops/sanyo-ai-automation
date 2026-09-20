@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SANYO AI OS System 1 to System 2 Bridge Contract",
+  "contract_version": "1.1",
+  "purpose": "Machine-readable boundary for approved System 1 jobs and System 2 result/measurement returns. This is an interface, not a knowledge store.",
+  "task_capability": {
+    "ARTICLE": "TEXT",
+    "SOCIAL": "TEXT",
+    "IMAGE": "IMAGE",
+    "VIDEO": "VIDEO"
+  },
+  "job": {
+    "required": [
+      "contract_version",
+      "job_id",
+      "task_type",
+      "source",
+      "content",
+      "source_refs",
+      "assets",
+      "return_delivery"
+    ],
+    "task_types": ["ARTICLE", "SOCIAL", "IMAGE", "VIDEO"],
+    "source": {
+      "system": "CLAUDE_WORKSPACE",
+      "required": ["system", "project_id", "task_id"]
+    },
+    "content": {
+      "required": ["objective", "audience", "platform", "approval_status"],
+      "approval_status": "APPROVED"
+    },
+    "source_refs": {
+      "minimum_items": 1,
+      "required_per_item": ["type", "status"],
+      "allowed_types": ["FILE", "URI"],
+      "required_status": "VERIFIED"
+    },
+    "assets": {
+      "required_status": "APPROVED"
+    },
+    "video": {
+      "required_for": "VIDEO",
+      "required": ["brief_id", "shot_plan_status", "shots"],
+      "shot_plan_status": "APPROVED",
+      "minimum_shots": 1
+    },
+    "character": {
+      "required_for": "VIDEO",
+      "required": ["required"],
+      "when_required": ["character_id", "reference_asset_id", "identity_status"],
+      "identity_status": "APPROVED",
+      "reference_asset_must_be_in_assets": "APPROVED"
+    },
+    "return_delivery": {
+      "required": ["mode"],
+      "allowed_modes": ["SYNC_RESPONSE", "CALLBACK_WEBHOOK", "FILE_REFERENCE"]
+    }
+  },
+  "result": {
+    "required": [
+      "contract_version",
+      "job_id",
+      "task_type",
+      "execution",
+      "technical_test",
+      "quality_evaluation",
+      "identity_evaluation",
+      "human_review",
+      "next_action"
+    ],
+    "execution_statuses": ["BLOCKED", "FAILED", "RUNNING", "GENERATED", "TESTED", "EVALUATED", "APPROVED"],
+    "test_statuses": ["PASS", "FAIL", "NOT_RUN", "NOT_APPLICABLE"],
+    "human_review_statuses": ["PENDING", "APPROVED", "REJECTED", "NOT_REQUIRED", "NOT_RUN"],
+    "next_actions": ["APPROVE", "REGENERATE", "REVIEW", "BLOCK"],
+    "identity_rule": "For VIDEO jobs with character.required=true, final approval requires an APPROVED character lock and one identity evaluation record per generated shot."
+  },
+  "measurement_event": {
+    "required": ["contract_version", "job_id", "source", "measurement_status", "measured_at", "metrics"],
+    "source_system": "SANYO_AI_AUTOMATION",
+    "measurement_status": "MEASURED",
+    "metrics": ["views", "watch_time", "completion_rate", "engagement_rate", "leads", "contracts", "revenue"]
+  },
+  "error_codes": [
+    "INVALID_CONTRACT",
+    "MISSING_REQUIRED_CONTEXT",
+    "MISSING_APPROVED_ASSET",
+    "MISSING_APPROVED_CHARACTER",
+    "PROVIDER_NOT_CONNECTED",
+    "PROVIDER_EXECUTOR_NOT_DEPLOYED",
+    "GENERATION_FAILED",
+    "TECHNICAL_TEST_FAILED",
+    "IDENTITY_DRIFT",
+    "QUALITY_GATE_FAILED",
+    "HUMAN_REVIEW_REQUIRED"
+  ]
+}

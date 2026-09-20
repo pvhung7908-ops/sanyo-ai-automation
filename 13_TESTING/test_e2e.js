@@ -1,171 +1,103 @@
-const fs = require('fs');
-const path = require('path');
-
-const ROOT = process.cwd();
-
-console.log('');
-console.log('==========================================');
-console.log(' SANYO AI AUTOMATION - E2E TEST v1');
-console.log('==========================================');
+const {
+  contract,
+  validateJob,
+  blockedResult,
+  validateMeasurementEvent
+} = require('../12_LOCAL_RUNTIME/bridge_contract');
+const { routeJob } = require('../09_AI_PROVIDER/provider_mapping');
 
 let failed = 0;
 
-function pass(name) {
-  console.log(`PASS - ${name}`);
+function check(condition, message) {
+  console.log((condition ? 'PASS' : 'FAIL') + ' - ' + message);
+  if (!condition) failed += 1;
 }
 
-function fail(name) {
-  console.log(`FAIL - ${name}`);
-  failed++;
+function baseJob(taskType) {
+  return {
+    contract_version: contract.contract_version,
+    job_id: 'SYV-BRIDGE-' + taskType + '-001',
+    task_type: taskType,
+    source: {
+      system: 'CLAUDE_WORKSPACE',
+      project_id: 'sanyo-knowledge',
+      task_id: 'task-001'
+    },
+    content: {
+      objective: 'Explain an approved topic accurately.',
+      audience: 'Homeowners',
+      platform: 'TikTok',
+      approval_status: 'APPROVED'
+    },
+    source_refs: [
+      { type: 'FILE', path: '01_BRAIN/03_PRODUCT/VERIFIED_FACTS.md', status: 'VERIFIED' }
+    ],
+    assets: [],
+    return_delivery: { mode: 'SYNC_RESPONSE' }
+  };
 }
 
-function exists(file) {
-  return fs.existsSync(path.join(ROOT, file));
-}
+const article = baseJob('ARTICLE');
+const validArticle = validateJob(article);
+check(validArticle.valid, 'approved ARTICLE contract is accepted');
 
-console.log('');
-console.log('=== 1. CORE FILES ===');
+const articleRoute = routeJob('ARTICLE');
+check(articleRoute.state === 'NOT_CONNECTED', 'ARTICLE does not claim a live text provider');
+const articleResult = blockedResult(article, 'PROVIDER_NOT_CONNECTED', articleRoute.reason, articleRoute);
+check(articleResult.execution.status === 'BLOCKED', 'missing provider blocks ARTICLE execution');
+check(articleResult.execution.output_reference === null, 'blocked ARTICLE has no fabricated output');
+check(articleResult.quality_evaluation.status === 'NOT_RUN', 'quality is not marked as passed before generation');
 
-[
-  '01_CORE/SYSTEM_MASTER.md',
-  '01_CORE/BRAND_PROFILE.md',
-  '01_CORE/CONTENT_ENGINE.md',
-  '02_VIDEO_BRIEF/VIDEO_BRIEF_MASTER.md',
-  '03_VEO_3/VEO_3_MASTER.md',
-  '04_PROMPTS/PROMPT_MASTER.md',
-  '05_ASSETS/ASSET_MASTER.md'
-].forEach(file => {
-  exists(file) ? pass(file) : fail(file);
-});
-
-console.log('');
-console.log('=== 2. AUTOMATION LAYERS ===');
-
-[
-  '06_N8N/SANYO_AI_AUTOMATION_MASTER.json',
-  '07_WORKFLOWS/WF-10_CALIBRATION.md',
-  '08_OUTPUT/FINAL_OUTPUT_RULES.md',
-  '09_AI_PROVIDER/AI_PROVIDER_MASTER.md',
-  '10_API_CONFIG/API_CONFIG_MASTER.json',
-  '11_SECURITY/security_test.js',
-  '12_LOCAL_RUNTIME/local_runtime.js'
-].forEach(file => {
-  exists(file) ? pass(file) : fail(file);
-});
-
-console.log('');
-console.log('=== 3. MASTER JSON ===');
-
-try {
-  const master = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, '06_N8N/SANYO_AI_AUTOMATION_MASTER.json'),
-      'utf8'
-    )
-  );
-
-  if (Array.isArray(master.nodes) && master.nodes.length >= 13) {
-    pass(`MASTER JSON nodes = ${master.nodes.length}`);
-  } else {
-    fail('MASTER JSON node count');
-  }
-
-  if (master.connections && Object.keys(master.connections).length > 0) {
-    pass('MASTER JSON connections');
-  } else {
-    fail('MASTER JSON connections');
-  }
-} catch (e) {
-  fail('MASTER JSON parse');
-}
-
-console.log('');
-console.log('=== 4. VALID OUTPUT TEST ===');
-
-const validOutput = {
-  quality_gate: { score: 1 },
-  calibration: { final_adjustment: 'PASS' },
-  human_review: { decision: 'APPROVED' }
+const incompleteVideo = baseJob('VIDEO');
+incompleteVideo.video = {
+  brief_id: 'BRIEF-001',
+  shot_plan_status: 'APPROVED',
+  shots: [{ shot_id: 'SHOT-01' }]
 };
-
-const validAllowed =
-  validOutput.quality_gate.score >= 1 &&
-  validOutput.calibration.final_adjustment === 'PASS' &&
-  validOutput.human_review.decision === 'APPROVED';
-
-validAllowed
-  ? pass('VALID OUTPUT -> ALLOWED')
-  : fail('VALID OUTPUT -> ALLOWED');
-
-console.log('');
-console.log('=== 5. FAILED OUTPUT TEST ===');
-
-const failedOutput = {
-  quality_gate: { score: 0.75 },
-  calibration: { final_adjustment: 'PASS' },
-  human_review: { decision: 'APPROVED' }
+incompleteVideo.character = {
+  required: true,
+  character_id: 'PERSON_HOMEOWNER_F01_V01',
+  reference_asset_id: 'PERSON_HOMEOWNER_F01_V01',
+  identity_status: 'NOT_PROVIDED'
 };
+const invalidVideo = validateJob(incompleteVideo);
+check(!invalidVideo.valid, 'VIDEO without an approved character is rejected');
+check(invalidVideo.errors.some(error => error.includes('MISSING_APPROVED_CHARACTER')), 'VIDEO reports the character blocker explicitly');
 
-const failedBlocked =
-  !(failedOutput.quality_gate.score >= 1);
-
-failedBlocked
-  ? pass('QUALITY FAIL -> OUTPUT BLOCKED')
-  : fail('QUALITY FAIL -> OUTPUT BLOCKED');
-
-console.log('');
-console.log('=== 6. CALIBRATION FAIL TEST ===');
-
-const calibrationFail = {
-  quality_gate: { score: 1 },
-  calibration: { final_adjustment: 'PENDING' },
-  human_review: { decision: 'APPROVED' }
+const video = baseJob('VIDEO');
+video.video = {
+  brief_id: 'BRIEF-002',
+  shot_plan_status: 'APPROVED',
+  shots: [{ shot_id: 'SHOT-01' }, { shot_id: 'SHOT-02' }]
 };
-
-const calibrationBlocked =
-  calibrationFail.calibration.final_adjustment !== 'PASS';
-
-calibrationBlocked
-  ? pass('CALIBRATION PENDING -> OUTPUT BLOCKED')
-  : fail('CALIBRATION PENDING -> OUTPUT BLOCKED');
-
-console.log('');
-console.log('=== 7. HUMAN REVIEW TEST ===');
-
-const humanReviewFail = {
-  quality_gate: { score: 1 },
-  calibration: { final_adjustment: 'PASS' },
-  human_review: { decision: 'PENDING' }
+video.character = {
+  required: true,
+  character_id: 'PERSON_HOMEOWNER_F01_V01',
+  reference_asset_id: 'PERSON_HOMEOWNER_F01_V01',
+  identity_status: 'APPROVED'
 };
+video.assets = [{ asset_id: 'PERSON_HOMEOWNER_F01_V01', status: 'APPROVED' }];
+const validVideo = validateJob(video);
+check(validVideo.valid, 'VIDEO accepts an approved character reference in approved assets');
+const videoResult = blockedResult(video, 'PROVIDER_NOT_CONNECTED', 'PROVIDER_DISABLED', routeJob('VIDEO'));
+check(videoResult.identity_evaluation.character_lock === 'LOCKED', 'approved video reference creates a character lock');
+check(videoResult.identity_evaluation.status === 'NOT_RUN', 'per-shot identity QC waits for generated shots');
+check(videoResult.identity_evaluation.per_shot.length === 0, 'no identity QC evidence is fabricated');
 
-const reviewBlocked =
-  humanReviewFail.human_review.decision !== 'APPROVED';
+const measurement = {
+  contract_version: contract.contract_version,
+  job_id: video.job_id,
+  source: { system: 'SANYO_AI_AUTOMATION' },
+  measurement_status: 'MEASURED',
+  measured_at: '2026-09-07T00:00:00.000Z',
+  metrics: { views: 0, watch_time: 0, completion_rate: 0, engagement_rate: 0, leads: 0, contracts: 0, revenue: 0 }
+};
+check(validateMeasurementEvent(measurement).valid, 'verified measurement return shape is accepted');
 
-reviewBlocked
-  ? pass('HUMAN REVIEW PENDING -> OUTPUT BLOCKED')
-  : fail('HUMAN REVIEW PENDING -> OUTPUT BLOCKED');
-
-console.log('');
-console.log('=== 8. FINAL DECISION ===');
-
-if (failed === 0) {
-  console.log('');
-  console.log('==========================================');
-  console.log(' SANYO E2E TEST = PASS');
-  console.log('==========================================');
-  console.log('');
-  console.log('VALID OUTPUT       = ALLOWED');
-  console.log('QUALITY FAIL       = BLOCKED');
-  console.log('CALIBRATION FAIL   = BLOCKED');
-  console.log('HUMAN REVIEW FAIL  = BLOCKED');
-  console.log('');
-  console.log('SYSTEM READY FOR REAL AI INTEGRATION');
-  console.log('');
-} else {
-  console.log('');
-  console.log('==========================================');
-  console.log(' SANYO E2E TEST = FAIL');
-  console.log('==========================================');
-  console.log(`${failed} test(s) failed.`);
+if (failed) {
+  console.log('SANYO BRIDGE E2E = FAIL (' + failed + ' assertion(s))');
   process.exitCode = 1;
+} else {
+  console.log('SANYO BRIDGE E2E = PASS');
+  console.log('SYSTEM STATE = INTEGRATION_READY; no external provider was called.');
 }

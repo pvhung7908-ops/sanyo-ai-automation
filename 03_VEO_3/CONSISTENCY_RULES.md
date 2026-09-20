@@ -28,6 +28,8 @@ Do not change:
 
 without an explicit story reason.
 
+For a locked recurring character, evaluate every generated shot against the approved reference. A failed or missing shot-level evaluation blocks final-video approval.
+
 ## Architecture Consistency
 
 Do not change:

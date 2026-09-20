@@ -4,21 +4,18 @@
 
 This document defines the automation architecture for the Sanyo AI Content Operating System.
 
-n8n is the orchestration layer connecting:
+n8n is the System 2 orchestration layer:
 
-Customer Insight
-→ Content Engine
-→ Video Brief
-→ Prompt System
-→ Asset System
-→ VEO 3 Production
-→ Quality Gate
-→ Output
-→ Measurement
-→ Improvement
+Approved System 1 Job
+→ Contract Validation
+→ Character Lock (when required)
+→ Provider Readiness
+→ Provider Executor (only after credential audit)
+→ Per-shot Identity QC (VIDEO with character)
+→ Quality / Human Review
+→ Result and Measurement Return
 
-n8n must orchestrate the system.
-It must not replace the Core knowledge system.
+n8n must orchestrate execution. It must not replace the System 1 knowledge or content-intelligence system.
 
 ---
 
@@ -39,21 +36,7 @@ It must not replace the Core knowledge system.
 
 ## 3. Core Pipeline
 
-INPUT
-→ VALIDATE
-→ CUSTOMER INSIGHT
-→ CONTENT
-→ VIDEO BRIEF
-→ PROMPT ASSEMBLY
-→ ASSET SELECTION
-→ PRODUCTION
-→ QUALITY GATE
-→ HUMAN REVIEW
-→ OUTPUT
-→ PUBLISH
-→ MEASURE
-→ LEARN
-→ IMPROVE
+The current importable bridge workflow deliberately stops with a structured BLOCKED result while no verified provider executor is deployed. It never assigns generated, tested or approved status without output evidence.
 
 ---
 

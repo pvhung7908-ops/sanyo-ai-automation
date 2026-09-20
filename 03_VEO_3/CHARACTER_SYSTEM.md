@@ -20,6 +20,14 @@ Emotional state:
 
 ## Continuity Lock
 
+Before production, a recurring character must have:
+
+- Character ID
+- An APPROVED reference asset ID present in the submitted assets
+- A lock record tied to the job and expected shot IDs
+
+Text description alone is not an approved identity reference.
+
 Preserve:
 
 - Face identity
@@ -60,6 +68,7 @@ The family should appear authentic rather than staged.
 ## Quality Gate
 
 - Same identity across scenes
+- One recorded identity QC result for every generated shot
 - Same clothing unless intentionally changed
 - Correct age appearance
 - Natural movement

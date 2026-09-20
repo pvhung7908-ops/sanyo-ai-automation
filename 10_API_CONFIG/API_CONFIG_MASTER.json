@@ -8,7 +8,7 @@
     "required_env": [
       "OPENAI_API_KEY",
       "ANTHROPIC_API_KEY",
-      "GEMINI_API_KEY"
+      "GOOGLE_API_KEY"
     ]
   },
   "providers": {
@@ -27,7 +27,7 @@
     "google": {
       "enabled": false,
       "role": ["video", "image"],
-      "api_key_env": "GEMINI_API_KEY",
+      "api_key_env": "GOOGLE_API_KEY",
       "video_model_env": "VIDEO_MODEL",
       "image_model_env": "IMAGE_MODEL"
     }
@@ -44,7 +44,7 @@
     "max_retries": 1
   },
   "quality": {
-    "minimum_score": 1,
+    "minimum_score": 8,
     "required_checks": [
       "accuracy",
       "brand_consistency",

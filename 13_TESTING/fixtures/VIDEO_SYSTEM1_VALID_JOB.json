@@ -1,0 +1,46 @@
+{
+  "contract_version": "1.1",
+  "job_id": "SYV-FIXTURE-VIDEO-001",
+  "task_type": "VIDEO",
+  "source": {
+    "system": "CLAUDE_WORKSPACE",
+    "project_id": "sanyo-knowledge",
+    "task_id": "e2e-fixture-video-001"
+  },
+  "content": {
+    "objective": "Illustrative TikTok narrative test fixture: family story leading softly into researching a home elevator option.",
+    "audience": "Homeowners with elderly family members considering renovation",
+    "platform": "TikTok",
+    "approval_status": "APPROVED"
+  },
+  "source_refs": [
+    {
+      "type": "FILE",
+      "status": "VERIFIED",
+      "path": "05_ASSETS/PEOPLE_ASSETS.md"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "PERSON_HOMEOWNER_F01_V01",
+      "status": "APPROVED"
+    }
+  ],
+  "video": {
+    "brief_id": "BRIEF-FIXTURE-001",
+    "shot_plan_status": "APPROVED",
+    "shots": [
+      { "shot_id": "SHOT-01" },
+      { "shot_id": "SHOT-02" }
+    ]
+  },
+  "character": {
+    "required": true,
+    "character_id": "PERSON_HOMEOWNER_F01_V01",
+    "reference_asset_id": "PERSON_HOMEOWNER_F01_V01",
+    "identity_status": "APPROVED"
+  },
+  "return_delivery": {
+    "mode": "SYNC_RESPONSE"
+  }
+}
