@@ -1,10 +1,10 @@
 # SANYO AI OS — System 2
 
-Execution layer for Sanyo Yusoki Việt Nam. This repository is **System 2: AI Content Production & Automation**; CLAUDE-WORKSPACE remains System 1: Knowledge, Reasoning and Content Intelligence.
+Execution layer for Sanyo Yusoki Việt Nam. This repository is **System 2: AI Content Production & Automation**; System 1 (Knowledge, Reasoning and Content Intelligence) lives at [pvhung7908-ops/sanyo-ai-knowledge-os](https://github.com/pvhung7908-ops/sanyo-ai-knowledge-os).
 
 ## Boundary
 
-- No repository merge and no duplicated knowledge base
+- No repository merge and no duplicated knowledge base — System 1 content is not copied into this repository; read it from its own repo
 - System 1 submits approved ARTICLE, SOCIAL, IMAGE or VIDEO jobs through the versioned bridge contract
 - System 2 returns structured result and measurement events
 - System 2 owns provider routing, VEO, prompts, assets, characters and workflow execution
